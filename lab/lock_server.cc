@@ -28,12 +28,10 @@ lock_protocol::status
 lock_server::grantLock(int clt, lock_protocol::lockid_t lid, int &r)
 {
 
-    bool isBlocked = false;
     pthread_mutex_lock(&lock_mutex);
     if(lockStates.find(lid)==lockStates.end())
     {
         this->lockStates[lid]=true;
-        isBlocked = true;
         pthread_mutex_unlock(&lock_mutex);
 
     }else 
@@ -46,7 +44,6 @@ lock_server::grantLock(int clt, lock_protocol::lockid_t lid, int &r)
         pthread_mutex_unlock(&lock_mutex);
     }
 
-    printf("Grant acquire %ld\n", lid);
     lock_protocol::status ret = lock_protocol::OK;
     return ret;
 }
@@ -59,7 +56,6 @@ lock_server::releaseLock(int clt, lock_protocol::lockid_t lid, int &r)
     this->lockStates[lid]=false;
     pthread_cond_signal(&lock_cv);
     pthread_mutex_unlock(&lock_mutex);
-    printf("release %ld\n", lid);
     return lock_protocol::OK;
 }
 
