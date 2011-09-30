@@ -652,12 +652,7 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
     std::map<unsigned int, std::list<reply_t> >::iterator clt;
     std::list<reply_t>::iterator it;
 
-    while ( reply_window_[clt_nonce].size()>0 &&(reply_window_[clt_nonce].front().xid <= xid_rep))
-    {
-        reply_window_[clt_nonce].pop_front();
-    }
-
-    if( xid <= xid_rep )
+    if( xid < xid_rep )
     {
         return FORGOTTEN;
 
@@ -665,52 +660,43 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
     {
         clt = reply_window_.find(clt_nonce);
         it = clt->second.begin();
-        bool isFind = false;
+        reply_t newReply(xid);
 
         while(it != clt->second.end())
         {
             if(it->xid == xid)
             {
-                isFind = true;
-                break;
-            }
-            it++;
-        }
-
-        if(isFind)
-        {
-            bool cb_present = it->cb_present;
-
-            if(cb_present == false)
-                return INPROGRESS;
-            else
-            {
-                *b = (it->buf);
-                *sz = (it->sz);
-                return DONE;
-            }
-
-        }else
-        {
-           
-            
-            it = clt->second.begin();
-            reply_t newReply(xid);
-            while(it!=clt->second.end())
-            {
-                if(it->xid > xid)
+                if(it->cb_present)
                 {
-                    clt->second.insert(it, newReply);
-                    break;
+                    *b = (it->buf);
+                    *sz = (it->sz);
+                    return  DONE;
+                }else
+                {
+                    return INPROGRESS;
                 }
+            }
+
+            
+            if(it->xid > xid)
+            {
+                clt->second.insert(it,newReply);
+                return NEW;
+            }
+
+            if(it->xid < xid_rep )
+            {
+                it = clt->second.erase(it);
+            }else
+            {
                 it++;
             }
-            clt->second.push_back(newReply);
-            
-            return NEW;
         }
 
-    } 
+        clt->second.push_back(newReply);
+        return NEW;
+    }
+
 }
 
 //rpc handler
